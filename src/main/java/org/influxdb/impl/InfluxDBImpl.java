@@ -205,6 +205,19 @@ public class InfluxDBImpl implements InfluxDB {
 		this.influxDBService.query(this.username, this.password, "CREATE DATABASE IF NOT EXISTS \"" + name + "\"");
 	}
 
+	public void createRetentionPolicy(final String name, final String duration, final String policyName, final int replicationNum,
+			final boolean isDefault) {
+		Preconditions.checkArgument(!name.contains("-"), "Databasename cant contain -");
+		Preconditions.checkArgument(duration.length() > 0, "duration can not be empty");
+		Preconditions.checkArgument(policyName.length() > 0, "policyName can not be empty");
+		String sql = "CREATE RETENTION POLICY \"" + policyName + "\" ON \"" + name + "\" DURATION " + duration
+				+ " REPLICATION " + replicationNum;
+		if (isDefault) {
+			sql += " DEFAULT";
+		}
+		this.influxDBService.query(this.username, this.password, sql);
+	}
+
 	/**
 	 * {@inheritDoc}
 	 */

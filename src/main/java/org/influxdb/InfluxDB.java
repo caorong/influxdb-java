@@ -174,6 +174,21 @@ public interface InfluxDB {
 	public QueryResult query(final Query query, TimeUnit timeUnit);
 
 	/**
+	 * create retentionPolicy
+	 *
+	 * @param name           the name of the database.
+	 * @param duration       the duration of the new retention policy. Durations such as 1h, 90m, 12h, 7d, and 4w,
+	 *                        are all supported and mean 1 hour, 90 minutes, 12 hours, 7 day, and 4 weeks, respectively.
+	 *                        For infinite retention – meaning the data will never be deleted – use ‘INF’ for duration.
+	 *                        The minimum retention period is 1 hour
+	 * @param policyName     the replication of the retention policy
+	 * @param replicationNum the replication of the retention policy (1,2,3 ...)
+	 * @param isDefault      whether or not to set the policy as default
+	 */
+	public void createRetentionPolicy(final String name, final String duration, final String policyName,
+			final int replicationNum, final boolean isDefault);
+
+	/**
 	 * Create a new Database.
 	 *
 	 * @param name
