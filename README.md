@@ -87,7 +87,7 @@ For additional usage examples have a look at [InfluxDBTest.java](https://github.
 
 ### Build Requirements
 
-* Java 1.7+
+* Java 1.6+
 * Maven 3.0+
 * Docker daemon running
 
