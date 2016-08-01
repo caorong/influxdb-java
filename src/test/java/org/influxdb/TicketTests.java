@@ -9,9 +9,8 @@ import org.influxdb.InfluxDB.LogLevel;
 import org.influxdb.dto.BatchPoints;
 import org.influxdb.dto.Point;
 import org.influxdb.dto.Pong;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * Test the InfluxDB API.
@@ -19,10 +18,9 @@ import org.testng.annotations.Test;
  * @author stefan.majer [at] gmail.com
  *
  */
-@Test
 public class TicketTests {
 
-	private InfluxDB influxDB;
+	private static InfluxDB influxDB;
 
 	/**
 	 * Create a influxDB connection before all tests start.
@@ -31,13 +29,13 @@ public class TicketTests {
 	 * @throws IOException
 	 */
 	@BeforeClass
-	public void setUp() throws InterruptedException, IOException {
-		this.influxDB = InfluxDBFactory.connect("http://" + TestUtils.getInfluxIP() + ":8086", "root", "root");
+	public static void setUp() throws InterruptedException, IOException {
+		influxDB = InfluxDBFactory.connect("http://" + TestUtils.getInfluxIP() + ":8086", "root", "root");
 		boolean influxDBstarted = false;
 		do {
 			Pong response;
 			try {
-				response = this.influxDB.ping();
+				response = influxDB.ping();
 				System.out.println(response);
 				if (!response.getVersion().equalsIgnoreCase("unknown")) {
 					influxDBstarted = true;
@@ -48,12 +46,12 @@ public class TicketTests {
 			}
 			Thread.sleep(100L);
 		} while (!influxDBstarted);
-		this.influxDB.setLogLevel(LogLevel.FULL);
+		influxDB.setLogLevel(LogLevel.FULL);
 		// String logs = CharStreams.toString(new InputStreamReader(containerLogsStream,
 		// Charsets.UTF_8));
 		System.out.println("##################################################################################");
 		// System.out.println("Container Logs: \n" + logs);
-		System.out.println("#  Connected to InfluxDB Version: " + this.influxDB.version() + " #");
+		System.out.println("#  Connected to InfluxDB Version: " + influxDB.version() + " #");
 		System.out.println("##################################################################################");
 	}
 
@@ -61,7 +59,7 @@ public class TicketTests {
 	 * Test for ticket #38
 	 *
 	 */
-	@Test(enabled = true)
+	@Test
 	public void testTicket38() {
 		String dbName = "ticket38_" + System.currentTimeMillis();
 		this.influxDB.createDatabase(dbName);
@@ -82,7 +80,7 @@ public class TicketTests {
 	 * Test for ticket #39
 	 *
 	 */
-	@Test(enabled = true)
+	@Test
 	public void testTicket39() {
 		String dbName = "ticket39_" + System.currentTimeMillis();
 		this.influxDB.createDatabase(dbName);
@@ -103,7 +101,7 @@ public class TicketTests {
 	/**
 	 * Test for ticket #40
 	 */
-	@Test(enabled = true)
+	@Test
 	public void testTicket40() {
 		String dbName = "ticket40_" + System.currentTimeMillis();
 		this.influxDB.createDatabase(dbName);

@@ -5,8 +5,10 @@ import java.util.concurrent.TimeUnit;
 import org.influxdb.InfluxDB.LogLevel;
 import org.influxdb.dto.BatchPoints;
 import org.influxdb.dto.Point;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.BeforeClass;
+import org.junit.Test;
+//import org.testng.annotations.BeforeClass;
+//import org.testng.annotations.Test;
 
 import com.google.common.base.Stopwatch;
 
@@ -22,7 +24,7 @@ public class PerformanceTests {
 		this.influxDB.setLogLevel(LogLevel.NONE);
 	}
 
-	@Test(threadPoolSize = 10, enabled = false)
+	@Test
 	public void writeSinglePointPerformance() throws InterruptedException {
 		String dbName = "write_" + System.currentTimeMillis();
 		this.influxDB.createDatabase(dbName);
@@ -40,7 +42,7 @@ public class PerformanceTests {
 		this.influxDB.deleteDatabase(dbName);
 	}
 
-	@Test(enabled = false)
+	@Test
 	public void writePerformance() {
 		String dbName = "writepoints_" + System.currentTimeMillis();
 		this.influxDB.createDatabase(dbName);
@@ -69,7 +71,7 @@ public class PerformanceTests {
 		this.influxDB.deleteDatabase(dbName);
 	}
 
-	@Test(enabled = true)
+	@Test
 	public void maxWritePointsPerformance() {
 		String dbName = "d";
 		this.influxDB.createDatabase(dbName);

@@ -1,10 +1,12 @@
 package org.influxdb.impl;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.github.kevinsawicki.http.HttpRequest;
 import com.google.common.base.Joiner;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.BatchPoints;
@@ -13,16 +15,19 @@ import org.influxdb.dto.Pong;
 import org.influxdb.dto.Query;
 import org.influxdb.dto.QueryResult;
 import org.influxdb.impl.BatchProcessor.BatchEntry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.spi.LoggerFactoryBinder;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 
-import retrofit.RestAdapter;
-import retrofit.client.Client;
-import retrofit.client.Header;
-import retrofit.client.Response;
-import retrofit.mime.TypedString;
+//import retrofit.RestAdapter;
+//import retrofit.client.Client;
+//import retrofit.client.Header;
+//import retrofit.client.Response;
+//import retrofit.mime.TypedString;
 
 /**
  * Implementation of a InluxDB API.
@@ -31,9 +36,11 @@ import retrofit.mime.TypedString;
  * 
  */
 public class InfluxDBImpl implements InfluxDB {
+	private static Logger LOG = LoggerFactory.getLogger(InfluxDBImpl.class);
+
 	private final String username;
 	private final String password;
-	private final RestAdapter restAdapter;
+//	private final RestAdapter restAdapter;
 	private final InfluxDBService influxDBService;
 	private BatchProcessor batchProcessor;
 	private final AtomicBoolean batchEnabled = new AtomicBoolean(false);
@@ -43,37 +50,37 @@ public class InfluxDBImpl implements InfluxDB {
 	private LogLevel logLevel = LogLevel.NONE;
 	
 	public InfluxDBImpl(final String url, final String username, final String password, 
-			final Client client) {
+			final InfluxDBService influxDBService) {
 		super();
 		this.username = username;
 		this.password = password;
-		this.restAdapter = new RestAdapter.Builder()
-				.setEndpoint(url)
-				.setErrorHandler(new InfluxDBErrorHandler())
-				.setClient(client)
-				.build();
-		this.influxDBService = this.restAdapter.create(InfluxDBService.class);
+//		this.restAdapter = new RestAdapter.Builder()
+//				.setEndpoint(url)
+//				.setErrorHandler(new InfluxDBErrorHandler())
+//				.setClient(client)
+//				.build();
+		this.influxDBService = influxDBService; //this.restAdapter.create(InfluxDBService.class);
 	}
 	
 
 	@Override
 	public InfluxDB setLogLevel(final LogLevel logLevel) {
-		switch (logLevel) {
-		case NONE:
-			this.restAdapter.setLogLevel(retrofit.RestAdapter.LogLevel.NONE);
-			break;
-		case BASIC:
-			this.restAdapter.setLogLevel(retrofit.RestAdapter.LogLevel.BASIC);
-			break;
-		case HEADERS:
-			this.restAdapter.setLogLevel(retrofit.RestAdapter.LogLevel.HEADERS);
-			break;
-		case FULL:
-			this.restAdapter.setLogLevel(retrofit.RestAdapter.LogLevel.FULL);
-			break;
-		default:
-			break;
-		}
+//		switch (logLevel) {
+//		case NONE:
+//			this.restAdapter.setLogLevel(retrofit.RestAdapter.LogLevel.NONE);
+//			break;
+//		case BASIC:
+//			this.restAdapter.setLogLevel(retrofit.RestAdapter.LogLevel.BASIC);
+//			break;
+//		case HEADERS:
+//			this.restAdapter.setLogLevel(retrofit.RestAdapter.LogLevel.HEADERS);
+//			break;
+//		case FULL:
+//			this.restAdapter.setLogLevel(retrofit.RestAdapter.LogLevel.FULL);
+//			break;
+//		default:
+//			break;
+//		}
 		this.logLevel = logLevel;
 		return this;
 	}
@@ -111,12 +118,13 @@ public class InfluxDBImpl implements InfluxDB {
 	@Override
 	public Pong ping() {
 		Stopwatch watch = Stopwatch.createStarted();
-		Response response = this.influxDBService.ping();
-		List<Header> headers = response.getHeaders();
+		HttpRequest response = this.influxDBService.ping();
+//		List<Header> headers = response.getHeaders();
+		Map<String, List<String>> headers = response.headers();
 		String version = "unknown";
-		for (Header header : headers) {
-			if (null != header.getName() && header.getName().equalsIgnoreCase("X-Influxdb-Version")) {
-				version = header.getValue();
+		for (Map.Entry<String, List<String>> header : headers.entrySet()) {
+			if (null != header.getKey() && header.getKey().equalsIgnoreCase("X-Influxdb-Version")) {
+				version = header.getValue().get(0);
 			}
 		}
 		Pong pong = new Pong();
@@ -147,33 +155,28 @@ public class InfluxDBImpl implements InfluxDB {
 	@Override
 	public void write(final BatchPoints batchPoints) {
 		this.batchedCount.addAndGet(batchPoints.getPoints().size());
-		TypedString lineProtocol = new TypedString(batchPoints.lineProtocol());
-		this.influxDBService.writePoints(
-				this.username,
-				this.password,
-				batchPoints.getDatabase(),
-				batchPoints.getRetentionPolicy(),
-				TimeUtil.toTimePrecision(TimeUnit.NANOSECONDS),
-				batchPoints.getConsistency().value(),
-				lineProtocol);
-
+		handleWriteResult(this.influxDBService
+				.writePoints(this.username, this.password, batchPoints.getDatabase(),
+						batchPoints.getRetentionPolicy(), TimeUtil.toTimePrecision(TimeUnit.NANOSECONDS),
+						batchPoints.getConsistency().value(), batchPoints.lineProtocol()));
 	}
 
 	@Override
 	public void write(final String database, final String retentionPolicy, final ConsistencyLevel consistency, final String records) {
-		this.influxDBService.writePoints(
-				this.username,
-				this.password,
-				database,
-				retentionPolicy,
-				TimeUtil.toTimePrecision(TimeUnit.NANOSECONDS),
-				consistency.value(),
-				new TypedString(records));
+		handleWriteResult(this.influxDBService
+				.writePoints(this.username, this.password, database, retentionPolicy,
+						TimeUtil.toTimePrecision(TimeUnit.NANOSECONDS), consistency.value(), records));
 	}
 	@Override
 	public void write(final String database, final String retentionPolicy, final ConsistencyLevel consistency, final List<String> records) {
 		final String joinedRecords = Joiner.on("\n").join(records);
 		write(database, retentionPolicy, consistency, joinedRecords);
+	}
+
+	private void handleWriteResult(HttpRequest httpRequest) {
+		if (httpRequest.code() >= 400) {
+			LOG.error("write influxdb data error! data = {}", httpRequest.body());
+		}
 	}
 
 	/**
@@ -192,7 +195,8 @@ public class InfluxDBImpl implements InfluxDB {
 	@Override
 	public QueryResult query(final Query query, final TimeUnit timeUnit) {
 		QueryResult response = this.influxDBService
-				.query(this.username, this.password, query.getDatabase(), TimeUtil.toTimePrecision(timeUnit) , query.getCommand());
+				.query(this.username, this.password, query.getDatabase(), TimeUtil.toTimePrecision(timeUnit),
+						query.getCommand());
 		return response;
 	}
 	
